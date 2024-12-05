@@ -6,8 +6,8 @@ export default class UserSeeder extends BaseSeeder {
     // Insert 10 sample users
 
     await User.create({
-      username: 'dooradee_admin1',
-      fullName: 'dooradee_admin1',
+      username: 'doraidee_admin1',
+      fullName: 'doraidee_admin1',
       password: 'doraidee_1',
       role: Role.ADMIN
     })

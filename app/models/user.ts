@@ -16,7 +16,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare id: number
 
   @column()
-  declare fullName: string | null
+  declare fullname: string | null
 
   @column()
   declare username: string
@@ -35,5 +35,5 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   // Define has-many relationship with Rating
   @hasMany(() => Rating)
-  public ratings: HasMany<typeof Rating>
+  declare ratings: HasMany<typeof Rating>
 }

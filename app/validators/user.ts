@@ -7,6 +7,12 @@ const schema =  vine.object({
                              .first()
         return !user
     }),
+    fullname: vine.string().trim().minLength(6).maxLength(254).unique( async(db, value, field)=>{
+        const user = await db.from('users')
+                             .where('fullname',value)
+                             .first()
+        return !user
+    }),
     password: vine.string().trim().minLength(6).confirmed()
 })
 

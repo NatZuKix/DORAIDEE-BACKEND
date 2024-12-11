@@ -8,4 +8,5 @@
 */
 
 import "./routes/user.js"
+import "./routes/movie.js"
 

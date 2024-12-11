@@ -1,10 +1,11 @@
+import type { HasMany} from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasMany} from '@adonisjs/lucid/orm'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import Role from '../../Contract/Role.js'
-import Rating from './rating.js'
+import Review from './review.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['username'],
@@ -16,10 +17,13 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare id: number
 
   @column()
-  declare fullname: string | null
+  declare fullname: string
 
   @column()
   declare username: string
+
+  @column()
+  declare fav_categories: string
 
   @column({ serializeAs: null })
   declare password: string
@@ -34,6 +38,6 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare updatedAt: DateTime | null
 
   // Define has-many relationship with Rating
-  @hasMany(() => Rating)
-  declare ratings: HasMany<typeof Rating>
+  @hasMany(() => Review)
+  declare reviews: HasMany<typeof Review>
 }

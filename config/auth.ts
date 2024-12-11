@@ -4,8 +4,10 @@ import type { InferAuthEvents, Authenticators } from '@adonisjs/auth/types'
 import { JwtGuardUser, BaseJwtContent } from '@maximemrf/adonisjs-jwt/types'
 import User from '#models/user'
 import { jwtGuard } from '@maximemrf/adonisjs-jwt/jwt_config'
+import Role from '../Contract/Role.js'
 interface JwtContent extends BaseJwtContent {
   username: string
+  fullname: string
 }
 
 const authConfig = defineConfig({
@@ -17,8 +19,8 @@ const authConfig = defineConfig({
         model: () => import('#models/user')
       }),
     }),
-    jwt:jwtGuard({
-      tokenExpiresIn: '1h',
+    jwt: jwtGuard({
+      tokenExpiresIn: '5h',
       useCookies: false,
       provider: sessionUserProvider({
         model: () => import('#models/user'),
@@ -26,6 +28,7 @@ const authConfig = defineConfig({
       content: (user: JwtGuardUser<User>): JwtContent => ({
         userId: user.getId(),
         username: user.getOriginal().username,
+        fullname: user.getOriginal().fullname
       }),
     }),
   },

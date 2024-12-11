@@ -1,10 +1,12 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column,manyToMany,hasMany } from '@adonisjs/lucid/orm'
+import type { HasMany,ManyToMany} from '@adonisjs/lucid/types/relations'
 import Category from './category.js'
-import Rating from './rating.js'
 import Review from './review.js'
-import MovieRate from '../../Enums/Movierate.js'
 import Streaming from '../../Enums/Streaming.js'
+import MovieRate from '../../Enums/MovieRate.js'
+
+
 export default class Movie extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
@@ -58,10 +60,6 @@ export default class Movie extends BaseModel {
     pivotTable: 'movie_categories',
   })
   declare categories: ManyToMany<typeof Category>
-
-  // Define has-many relationship with Rating
-  @hasMany(() => Rating)
-  declare ratings: HasMany<typeof Rating>
 
    // Define has-many relationship with Rating
    @hasMany(() => Review)

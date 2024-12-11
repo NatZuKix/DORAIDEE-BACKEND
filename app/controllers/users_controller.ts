@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/user'
 import { registerUserValidator } from '#validators/user'
 import Role from '../../Contract/Role.js'
+import Categories from '../../Enums/Categories.js'
 
 
 export default class UsersController {
@@ -16,7 +17,7 @@ export default class UsersController {
     async register({ request, response }: HttpContext) {
         try {
             const payload = await request.validateUsing(registerUserValidator)
-            const user = await User.create({ username: payload.username, password: payload.password })
+            const user = await User.create({ username: payload.username, password: payload.password ,fullname:payload.fullname})
             response.ok('The user is register successfully.')
         } catch (error) {
             response.badRequest(error.messages)
@@ -65,10 +66,10 @@ export default class UsersController {
         }
     }
 
-    async toggleAdmin({ request, response }: HttpContext) {
+    async toggleAdmin({ request, response,params }: HttpContext) {
         try {
             // Get the userId and action (grant or remove) from the request
-            const { userId, action } = request.all()
+            const {  action } = request.all()
     
             // Validate the action (either 'grant' or 'remove')
             if (action !== 'grant' && action !== 'remove') {
@@ -76,7 +77,7 @@ export default class UsersController {
             }
     
             // Find the user by userId
-            const user = await User.find(userId)
+            const user = await User.find(params.id)
     
             if (!user) {
                 return response.notFound({ message: 'User not found' })
@@ -100,5 +101,36 @@ export default class UsersController {
         }
     }
 
+    async modifyCategories({ request, response,params }: HttpContext){
+        try {
+            // Get the userId and action (grant or remove) from the request
+            const {  data } = request.all()
+    
+            const catagories = JSON.parse(data);
+
+            const isArrayValid = catagories.every((item:any) => Object.values(Categories).includes(item));
+
+            if(!isArrayValid){
+                return response.badRequest({ message: 'Invalid categories' })
+            }
+  
+    
+            // Find the user by userId
+            const user = await User.find(params.id)
+    
+            if (!user) {
+                return response.notFound({ message: 'User not found' })
+            }
+    
+            user.fav_categories=data
+    
+            // Save the updated user role to the database
+            await user.save()
+    
+        } catch (error) {
+            // Handle any unexpected errors
+            return response.badRequest(error.messages)
+        }
+    }
 
 }

@@ -1,3 +1,4 @@
+import type { BelongsTo} from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import { BaseModel, column,belongsTo } from '@adonisjs/lucid/orm'
 import User from './user.js'
@@ -15,6 +16,9 @@ export default class Review extends BaseModel {
 
   @column()
   declare comment: string
+
+  @column()
+  declare star: number
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

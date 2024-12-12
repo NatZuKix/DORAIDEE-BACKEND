@@ -23,7 +23,7 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare username: string
 
   @column()
-  declare fav_categories: string
+  declare favoritecategories: string
 
   @column({ serializeAs: null })
   declare password: string

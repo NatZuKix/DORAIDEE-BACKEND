@@ -17,20 +17,32 @@ export default class UsersController {
     async register({ request, response }: HttpContext) {
         try {
             const payload = await request.validateUsing(registerUserValidator)
-            const user = await User.create({ username: payload.username, password: payload.password ,fullname:payload.fullname})
+            await User.create({ username: payload.username, password: payload.password ,fullname:payload.fullname})
             response.ok('The user is register successfully.')
         } catch (error) {
             response.badRequest(error.messages)
         }
     }
 
-    async getUser({ request, response }: HttpContext) {
+    async getAllUser({ response }: HttpContext) {
+        try {
+            const users = await User.all()
+            return response.ok(users)
+
+        } catch (error) {
+            return response.internalServerError(error.messages)
+        }
+    }
+
+    async getUserById({ response,params }: HttpContext) {
         try {
             // Assuming you are validating the request with the same schema for username
-            const { userId } = request.all()
-
+            const { id } = params
+            
             // Find the user by username
-            const user = await User.find(userId)
+            const user = await User.query().where('id',id).preload('reviews',(query)=>{
+                query.select('star','comment','createdAt')
+            })
 
             if (!user) {
                 return response.notFound({ message: 'User not found' })
@@ -38,18 +50,19 @@ export default class UsersController {
             return response.ok(user)
 
         } catch (error) {
-            // Handle validation errors or any other unexpected errors
+           console.log(error);
+           
             return response.badRequest(error.messages)
         }
     }
 
-    async removeUser({ request, response }: HttpContext) {
+    async removeUser({ params, response }: HttpContext) {
         try {
             // Assuming you are validating the request with the same schema for username
-            const { userId } = request.all()
+            const { id } = params
 
             // Find the user by username
-            const user = await User.find(userId)
+            const user = await User.find(id)
 
             if (!user) {
                 return response.notFound({ message: 'User not found' })
@@ -106,7 +119,7 @@ export default class UsersController {
             // Get the userId and action (grant or remove) from the request
             const {  data } = request.all()
     
-            const catagories = JSON.parse(data);
+            const catagories = data
 
             const isArrayValid = catagories.every((item:any) => Object.values(Categories).includes(item));
 
@@ -122,15 +135,15 @@ export default class UsersController {
                 return response.notFound({ message: 'User not found' })
             }
     
-            user.fav_categories=data
+            user.favoritecategories=JSON.stringify(data)
     
             // Save the updated user role to the database
             await user.save()
     
         } catch (error) {
-            // Handle any unexpected errors
+            console.log(error);
+            
             return response.badRequest(error.messages)
         }
     }
-
 }

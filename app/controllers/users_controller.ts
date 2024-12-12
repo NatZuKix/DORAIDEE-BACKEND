@@ -17,14 +17,15 @@ export default class UsersController {
     async register({ request, response }: HttpContext) {
         try {
             const payload = await request.validateUsing(registerUserValidator)
-            await User.create({ username: payload.username, password: payload.password ,fullname:payload.fullname})
+            await User.create({ username: payload.username, password: payload.password, fullname: payload.fullname })
             response.ok('The user is register successfully.')
         } catch (error) {
             response.badRequest(error.messages)
         }
     }
 
-    async getAllUser({ response }: HttpContext) {
+    async getAllUser({ response, bouncer }: HttpContext) {
+        await bouncer.with('UserPolicy').authorize('list')
         try {
             const users = await User.all()
             return response.ok(users)
@@ -34,29 +35,37 @@ export default class UsersController {
         }
     }
 
-    async getUserById({ response,params }: HttpContext) {
+    async getUserById({ response, params, bouncer }: HttpContext) {
+        try {
+            const checkuser = await User.find(params.id)
+            await bouncer.with('UserPolicy').authorize('detail', checkuser!)
+        }
+        catch (error) {
+            return response.forbidden({errors:[{message:"Access denied"}]})
+        }
         try {
             // Assuming you are validating the request with the same schema for username
             const { id } = params
-            
+
             // Find the user by username
-            const user = await User.query().where('id',id).preload('reviews',(query)=>{
-                query.select('star','comment','createdAt')
+            const user = await User.query().where('id', id).preload('reviews', (query) => {
+                query.select('star', 'comment', 'createdAt')
             })
 
             if (!user) {
                 return response.notFound({ message: 'User not found' })
             }
+
             return response.ok(user)
 
         } catch (error) {
-           console.log(error);
-           
+            console.log(error);
+
             return response.badRequest(error.messages)
         }
     }
 
-    async removeUser({ params, response }: HttpContext) {
+    async removeUser({ params, response, bouncer }: HttpContext) {
         try {
             // Assuming you are validating the request with the same schema for username
             const { id } = params
@@ -64,9 +73,12 @@ export default class UsersController {
             // Find the user by username
             const user = await User.find(id)
 
+
             if (!user) {
                 return response.notFound({ message: 'User not found' })
             }
+
+            await bouncer.with('UserPolicy').authorize('delete', user!)
 
             // Delete the user from the database
             await user.delete()
@@ -79,23 +91,24 @@ export default class UsersController {
         }
     }
 
-    async toggleAdmin({ request, response,params }: HttpContext) {
+    async toggleAdmin({ request, response, params, bouncer }: HttpContext) {
+        await bouncer.with('UserPolicy').authorize('grant')
         try {
             // Get the userId and action (grant or remove) from the request
-            const {  action } = request.all()
-    
+            const { action } = request.all()
+
             // Validate the action (either 'grant' or 'remove')
             if (action !== 'grant' && action !== 'remove') {
                 return response.badRequest({ message: 'Invalid action. Use "grant" or "remove".' })
             }
-    
+
             // Find the user by userId
             const user = await User.find(params.id)
-    
+
             if (!user) {
                 return response.notFound({ message: 'User not found' })
             }
-    
+
             // Grant or remove admin role based on the action
             if (action === 'grant') {
                 user.role = Role.ADMIN
@@ -104,45 +117,50 @@ export default class UsersController {
                 user.role = Role.USER
                 return response.ok({ message: 'Admin access removed successfully.' })
             }
-    
+
             // Save the updated user role to the database
             await user.save()
-    
+
         } catch (error) {
             // Handle any unexpected errors
             return response.badRequest(error.messages)
         }
     }
 
-    async modifyCategories({ request, response,params }: HttpContext){
+    async modifyCategories({ request, response, params, bouncer }: HttpContext) {
+
         try {
             // Get the userId and action (grant or remove) from the request
-            const {  data } = request.all()
-    
+            const { data } = request.all()
+
             const catagories = data
 
-            const isArrayValid = catagories.every((item:any) => Object.values(Categories).includes(item));
+            const isArrayValid = catagories.every((item: any) => Object.values(Categories).includes(item));
 
-            if(!isArrayValid){
+            if (!isArrayValid) {
                 return response.badRequest({ message: 'Invalid categories' })
             }
-  
-    
+
+
             // Find the user by userId
             const user = await User.find(params.id)
-    
+
+
+
             if (!user) {
                 return response.notFound({ message: 'User not found' })
             }
-    
-            user.favoritecategories=JSON.stringify(data)
-    
+
+            await bouncer.with('UserPolicy').authorize('edit', user!)
+
+            user.favoritecategories = JSON.stringify(data)
+
             // Save the updated user role to the database
             await user.save()
-    
+
         } catch (error) {
             console.log(error);
-            
+
             return response.badRequest(error.messages)
         }
     }

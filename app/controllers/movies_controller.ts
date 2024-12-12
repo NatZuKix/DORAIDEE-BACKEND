@@ -79,8 +79,9 @@ export default class MoviesController {
         }
     }
 
-    async createNewMovie({ request, response, auth }: HttpContext) {
+    async createNewMovie({ request, response, auth ,bouncer}: HttpContext) {
         const user = auth.getUserOrFail()
+        await bouncer.with('MoviePolicy').authorize('create') 
         try {
             const payload = await request.validateUsing(createMovieValidator)
             const movie = await Movie.create({
@@ -100,8 +101,9 @@ export default class MoviesController {
         }
     }
 
-    async removeMovie({ params, response }: HttpContext) {
+    async removeMovie({ params, response,bouncer }: HttpContext) {
         const { id } = params
+        await bouncer.with('MoviePolicy').authorize('create') 
         try {
             const movie = await Movie.findOrFail(id)
             await movie.delete()
@@ -113,8 +115,9 @@ export default class MoviesController {
     }
 
     // Edit a movie by ID
-    async editMovie({ params, request, response }: HttpContext) {
+    async editMovie({ params, request, response,bouncer }: HttpContext) {
         const { id } = params
+        await bouncer.with('MoviePolicy').authorize('create') 
         let movie: any = null
         try {
             movie = await Movie.findOrFail(id)
@@ -152,8 +155,9 @@ export default class MoviesController {
     }
 
 
-    async uploadPoster({ params, request, response }: HttpContext) {
+    async uploadPoster({ params, request, response,bouncer }: HttpContext) {
         const { id } = params
+        await bouncer.with('MoviePolicy').authorize('create') 
         let movie: any = null
         try {
             movie = await Movie.findOrFail(id)

@@ -12,4 +12,8 @@
 |
 */
 
-export const policies = {}
+export const policies = {
+  ReviewPolicy: () => import('#policies/review_policy'),
+  UserPolicy: () => import('#policies/user_policy'),
+  MoviePolicy: () => import('#policies/movie_policy')
+}

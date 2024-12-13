@@ -20,7 +20,7 @@ router.group(()=>{
 router.group(()=>{ 
     router.group(()=>{ 
         router.get('/',[MoviesController,'getAllMovies']).as('movie.list')
-        router.get('/:category',[MoviesController,'getMoviesBycategory']).as('movie.listbycategory')
+        router.get('/category/:category',[MoviesController,'getMoviesBycategory']).as('movie.listbycategory')
         router.get('/:id',[MoviesController,'getMovieById']).as('movie.detail')
         router.get('/:id/poster',[MoviesController,'getPoster']).as('movie.poster')
     }).prefix('/v1/movies') 

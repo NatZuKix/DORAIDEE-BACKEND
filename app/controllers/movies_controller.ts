@@ -28,6 +28,9 @@ export default class MoviesController {
                     ? Reviews.reduce((sum, review: any) => sum + review.star, 0) / Reviews.length
                     : 0
 
+            const reviewCount=Reviews.length
+
+            
             // Remove the `ratings` property and add `avgRating`
             const { reviews, ...movieData } = movie.toJSON()
 
@@ -35,6 +38,7 @@ export default class MoviesController {
             return {
                 ...movieData,
                 avgRating,
+                reviewCount
             }
         })
 
@@ -47,7 +51,7 @@ export default class MoviesController {
         let cateId: number = 0
         try {
 
-            let categoryTarget = await Category.query().where('name', category).firstOrFail()
+            let categoryTarget = await Category.query().where('name', category).firstOrFail()   
             cateId = categoryTarget.id
             
         } catch (error) {
@@ -72,6 +76,7 @@ export default class MoviesController {
                         ? Reviews.reduce((sum, review: any) => sum + review.star, 0) / Reviews.length
                         : 0
 
+                const reviewCount=Reviews.length
                 // Remove the `ratings` property and add `avgRating`
                 const { reviews, ...movieData } = movie.toJSON()
 
@@ -79,6 +84,7 @@ export default class MoviesController {
                 return {
                     ...movieData,
                     avgRating,
+                    reviewCount
                 }
             })
             response.ok(moviesWithAvgRatings)

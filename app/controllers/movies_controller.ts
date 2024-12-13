@@ -9,8 +9,8 @@ import { dirname, join } from 'path';
 import { DateTime } from 'luxon'
 import { title } from 'process'
 import { fileURLToPath } from 'url';
-
-
+import Category from '#models/category'
+import MovieCategory from '#models/movie_category'
 export default class MoviesController {
 
     async getAllMovies({ response }: HttpContext) {
@@ -40,7 +40,52 @@ export default class MoviesController {
 
         response.ok(moviesWithAvgRatings)
     }
+    async getMoviesBycategory({ response, params }: HttpContext) {
 
+        const { category } = params
+        
+        let cateId: number = 0
+        try {
+
+            let categoryTarget = await Category.query().where('name', category).firstOrFail()
+            cateId = categoryTarget.id
+            
+        } catch (error) {
+            return response.badRequest('Invalid category.')
+        }
+        try {
+            const listMovie = await MovieCategory.query().where('categoryId', cateId)
+            const movieIds = listMovie.map((item) => item.movieId);
+            
+
+            // Fetch all movies and preload their ratings
+            const movies = await Movie.query().preload('reviews').whereIn('id', movieIds)
+
+            // Calculate the average rating for each movie
+            const moviesWithAvgRatings = movies.map((movie) => {
+                // Extract the ratings array from the preloaded relationship
+                const Reviews = Array.isArray(movie.$preloaded.reviews) ? movie.$preloaded.reviews : []
+
+                // Calculate the average rating
+                const avgRating =
+                    Reviews.length > 0
+                        ? Reviews.reduce((sum, review: any) => sum + review.star, 0) / Reviews.length
+                        : 0
+
+                // Remove the `ratings` property and add `avgRating`
+                const { reviews, ...movieData } = movie.toJSON()
+
+                // Return the movie object with the avgRating included, excluding ratings
+                return {
+                    ...movieData,
+                    avgRating,
+                }
+            })
+            response.ok(moviesWithAvgRatings)
+        } catch (error) {
+            return response.internalServerError(error)
+        }
+    }
     async getMovieById({ params, response }: HttpContext) {
         const { id } = params
         try {
@@ -52,6 +97,8 @@ export default class MoviesController {
                     queryReview.preload('user', (queryUser) => {
                         queryUser.select("fullname")
                     }).select("userId", "star", "comment", "createdAt")
+                }).preload('categories', (queryCategory) => {
+                    queryCategory.select('name')
                 })
                 .firstOrFail()
 
@@ -79,9 +126,9 @@ export default class MoviesController {
         }
     }
 
-    async createNewMovie({ request, response, auth ,bouncer}: HttpContext) {
+    async createNewMovie({ request, response, auth, bouncer }: HttpContext) {
         const user = auth.getUserOrFail()
-        await bouncer.with('MoviePolicy').authorize('create') 
+        await bouncer.with('MoviePolicy').authorize('create')
         try {
             const payload = await request.validateUsing(createMovieValidator)
             const movie = await Movie.create({
@@ -101,9 +148,9 @@ export default class MoviesController {
         }
     }
 
-    async removeMovie({ params, response,bouncer }: HttpContext) {
+    async removeMovie({ params, response, bouncer }: HttpContext) {
         const { id } = params
-        await bouncer.with('MoviePolicy').authorize('create') 
+        await bouncer.with('MoviePolicy').authorize('create')
         try {
             const movie = await Movie.findOrFail(id)
             await movie.delete()
@@ -115,9 +162,9 @@ export default class MoviesController {
     }
 
     // Edit a movie by ID
-    async editMovie({ params, request, response,bouncer }: HttpContext) {
+    async editMovie({ params, request, response, bouncer }: HttpContext) {
         const { id } = params
-        await bouncer.with('MoviePolicy').authorize('create') 
+        await bouncer.with('MoviePolicy').authorize('create')
         let movie: any = null
         try {
             movie = await Movie.findOrFail(id)
@@ -155,9 +202,9 @@ export default class MoviesController {
     }
 
 
-    async uploadPoster({ params, request, response,bouncer }: HttpContext) {
+    async uploadPoster({ params, request, response, bouncer }: HttpContext) {
         const { id } = params
-        await bouncer.with('MoviePolicy').authorize('create') 
+        await bouncer.with('MoviePolicy').authorize('create')
         let movie: any = null
         try {
             movie = await Movie.findOrFail(id)
@@ -228,7 +275,7 @@ export default class MoviesController {
         }
     }
 
-    async getPoster({ params,response }: HttpContext) {
+    async getPoster({ params, response }: HttpContext) {
         const { id } = params
         let movie: any = null
         try {
@@ -238,7 +285,7 @@ export default class MoviesController {
             return response.notFound('Movie not found')
         }
         try {
-            
+
 
             // กำหนดเส้นทางของไฟล์ปัจจุบัน
             const __filename = fileURLToPath(import.meta.url);

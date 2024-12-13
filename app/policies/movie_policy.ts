@@ -24,5 +24,9 @@ export default class MoviePolicy extends AdminBasePolicy {
   delete(user: User,movie: Movie): AuthorizerResponse { 
   return false
   }
+
+  chagecategory(user: User,movie: Movie): AuthorizerResponse { 
+    return false
+  }
   
 }

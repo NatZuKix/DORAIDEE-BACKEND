@@ -33,7 +33,7 @@ export default class Movie extends BaseModel {
   declare duration: number
 
   @column()
-  declare release_date: Date
+  declare releaseDate: Date
 
   @column()
   declare streaming: Streaming

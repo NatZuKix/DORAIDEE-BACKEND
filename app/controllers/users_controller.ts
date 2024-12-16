@@ -50,7 +50,7 @@ export default class UsersController {
             // Find the user by username
             const user = await User.query().where('id', id).preload('reviews', (query) => {
                 query.select('star', 'comment', 'createdAt')
-            })
+            }).first()
 
             if (!user) {
                 return response.notFound({ message: 'User not found' })

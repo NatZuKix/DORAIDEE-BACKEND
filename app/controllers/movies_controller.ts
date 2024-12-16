@@ -13,85 +13,150 @@ import Category from '#models/category'
 import MovieCategory from '#models/movie_category'
 export default class MoviesController {
 
-    async getAllMovies({ response }: HttpContext) {
-        // Fetch all movies and preload their ratings
-        const movies = await Movie.query().preload('reviews')
 
-        // Calculate the average rating for each movie
-        const moviesWithAvgRatings = movies.map((movie) => {
-            // Extract the ratings array from the preloaded relationship
-            const Reviews = Array.isArray(movie.$preloaded.reviews) ? movie.$preloaded.reviews : []
+    async getAllMovies({ request, response }: HttpContext) {
+        // Extract pagination parameters
+        const page = request.input('page', 1); // Default to page 1
+        const limit = request.input('limit', 10); // Default to 10 items per page
 
-            // Calculate the average rating
-            const avgRating =
-                Reviews.length > 0
-                    ? Reviews.reduce((sum, review: any) => sum + review.star, 0) / Reviews.length
-                    : 0
+        // Fetch movies with pagination and preload their reviews
+        const movies = await Movie.query()
+            .preload('reviews', (queryReview) => {
 
-            const reviewCount=Reviews.length
+                queryReview.select('star',)
+            })
+            .preload('categories', (queryCategory) => {
+                queryCategory.select('name')
+            })
+            .paginate(page, limit);
 
-            
-            // Remove the `ratings` property and add `avgRating`
-            const { reviews, ...movieData } = movie.toJSON()
+        // Serialize movies for proper JSON response
+        const serializedMovies = movies.toJSON();
+        // console.log(movies);
 
-            // Return the movie object with the avgRating included, excluding ratings
+        // Map and clean the movies data
+        const moviesWithAvgRatings = serializedMovies.data.map((movie) => {
+            // Extract reviews from the preloaded data
+            const reviews = movie.reviews || [];
+
+            // Calculate the average rating and review count
+            const avgRating = reviews.length
+                ? (reviews.reduce((sum: number, review: any) => sum + review.star, 0) / reviews.length).toFixed(1)
+                : '0';
+            const reviewCount = reviews.length;
+
+            // Return a cleaned movie object
             return {
-                ...movieData,
+                id: movie.id,
+                title: movie.title,
+                description: movie.description,
+                director: JSON.parse(movie.director), // Parse JSON fields
+                writer: JSON.parse(movie.writer),
+                cast: JSON.parse(movie.cast),
+                movierate: movie.movierate,
+                duration: movie.duration,
+                release_date: movie.release_date,
+                streaming: movie.streaming,
+                poster_url: movie.poster_url,
+                trailer: movie.trailer,
+                categories: movie.categories,
                 avgRating,
-                reviewCount
-            }
-        })
+                reviewCount,
+            };
+        });
 
-        response.ok(moviesWithAvgRatings)
+        // Send response with pagination meta and cleaned data
+        response.ok({
+            meta: {
+                total: serializedMovies.meta.total,
+                perPage: serializedMovies.meta.perPage,
+                currentPage: serializedMovies.meta.currentPage,
+                lastPage: serializedMovies.meta.lastPage,
+            },
+            data: moviesWithAvgRatings,
+        });
     }
-    async getMoviesBycategory({ response, params }: HttpContext) {
 
-        const { category } = params
-        
+    async getMoviesBycategory({ request, response, params }: HttpContext) {
+        const { category } = params;
+
+        // Extract pagination parameters
+        const page = request.input('page', 1); // Default to page 1
+        const limit = request.input('limit', 10); // Default to 10 items per page
+
         let cateId: number = 0
-        try {
 
-            let categoryTarget = await Category.query().where('name', category).firstOrFail()   
-            cateId = categoryTarget.id
-            
+        // Fetch category by name
+        try {
+            const categoryTarget = await Category.query().where('name', category).firstOrFail();
+            cateId = categoryTarget.id;
         } catch (error) {
-            return response.badRequest('Invalid category.')
+            return response.badRequest('Invalid category.');
         }
+
         try {
             const listMovie = await MovieCategory.query().where('categoryId', cateId)
             const movieIds = listMovie.map((item) => item.movieId);
-            
+            // Fetch movies belonging to the category with pagination
+            const movies = await Movie.query()
+                .whereIn('id', movieIds)
+                .preload('reviews', (queryReview) => {
+                    queryReview.select('star');
+                })
+                .preload('categories', (queryCategory) => {
+                    queryCategory.select('name');
+                })
+                .paginate(page, limit);
 
-            // Fetch all movies and preload their ratings
-            const movies = await Movie.query().preload('reviews').whereIn('id', movieIds)
+            // Serialize movies for proper JSON response
+            const serializedMovies = movies.toJSON();
 
-            // Calculate the average rating for each movie
-            const moviesWithAvgRatings = movies.map((movie) => {
-                // Extract the ratings array from the preloaded relationship
-                const Reviews = Array.isArray(movie.$preloaded.reviews) ? movie.$preloaded.reviews : []
+            // Map and clean the movies data
+            const moviesWithAvgRatings = serializedMovies.data.map((movie) => {
+                // Extract reviews from the preloaded data
+                const reviews = movie.reviews || [];
 
-                // Calculate the average rating
-                const avgRating =
-                    Reviews.length > 0
-                        ? Reviews.reduce((sum, review: any) => sum + review.star, 0) / Reviews.length
-                        : 0
+                // Calculate the average rating and review count
+                const avgRating = reviews.length
+                    ? (reviews.reduce((sum: number, review: any) => sum + review.star, 0) / reviews.length).toFixed(1)
+                    : '0';
+                const reviewCount = reviews.length;
 
-                const reviewCount=Reviews.length
-                // Remove the `ratings` property and add `avgRating`
-                const { reviews, ...movieData } = movie.toJSON()
-
-                // Return the movie object with the avgRating included, excluding ratings
+                // Return a cleaned movie object
                 return {
-                    ...movieData,
+                    id: movie.id,
+                    title: movie.title,
+                    description: movie.description,
+                    director: JSON.parse(movie.director), // Parse JSON fields
+                    writer: JSON.parse(movie.writer),
+                    cast: JSON.parse(movie.cast),
+                    movierate: movie.movierate,
+                    duration: movie.duration,
+                    release_date: movie.release_date,
+                    streaming: movie.streaming,
+                    poster_url: movie.poster_url,
+                    trailer: movie.trailer,
+                    categories: movie.categories,
                     avgRating,
-                    reviewCount
-                }
-            })
-            response.ok(moviesWithAvgRatings)
+                    reviewCount,
+                };
+            });
+
+            // Send response with pagination meta and cleaned data
+            response.ok({
+                meta: {
+                    total: serializedMovies.meta.total,
+                    perPage: serializedMovies.meta.perPage,
+                    currentPage: serializedMovies.meta.currentPage,
+                    lastPage: serializedMovies.meta.lastPage,
+                },
+                data: moviesWithAvgRatings,
+            });
         } catch (error) {
-            return response.internalServerError(error)
+            return response.internalServerError(error);
         }
     }
+
     async getMovieById({ params, response }: HttpContext) {
         const { id } = params
         try {
@@ -112,10 +177,9 @@ export default class MoviesController {
             const reviews = Array.isArray(movie.$preloaded.reviews) ? movie.$preloaded.reviews : []
 
             // Calculate the average rating
-            const avgRating =
-                reviews.length > 0
-                    ? reviews.reduce((sum, review: any) => sum + review.star, 0) / reviews.length
-                    : 0
+            const avgRating = reviews.length
+                ? (reviews.reduce((sum: number, review: any) => sum + review.star, 0) / reviews.length).toFixed(1)
+                : '0';
 
             // Remove the `reviews` property and include the avgRating
             const { userId: _, ...movieData } = movie.toJSON()
@@ -145,7 +209,9 @@ export default class MoviesController {
                 cast: payload.cast,
                 movierate: MovieRate[payload.movierate as keyof typeof MovieRate],
                 streaming: Streaming[payload.streaming as keyof typeof Streaming],
-                userId: user.id
+                userId: user.id,
+                poster_url: 'uploads/default.png',
+                trailer: 'https://www.youtube.com/embed/MzEFeIRJ0eQ?si=ciq9rLwHoWUXv8-r'
             })
             response.ok({ messages: "Movie createed successfully", movie: movie })
         } catch (error) {
@@ -198,6 +264,7 @@ export default class MoviesController {
             movie.streaming = payload.streaming != null ? Streaming[payload.streaming as keyof typeof Streaming] : movie.streaming
             movie.duration = payload.duration ?? movie.duration
             movie.trailer = payload.trailer ?? movie.trailer
+            movie.releaseDate = payload.releaseDate ?? movie.releaseDate
             movie.updatedAt = DateTime.now()
             await movie.save()
             response.ok({ message: 'Movie updated successfully', movie })

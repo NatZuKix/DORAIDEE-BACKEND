@@ -9,7 +9,8 @@ const schema = vine.object({
     streaming:vine.enum(['cinema', 'netflix', 'disney+hostar', 'hbomax', 'amazonprime']).nullable().optional(),  
     cast:vine.string().nullable().optional(),
     duration:vine.number().nullable().optional(),
-    trailer:vine.string().nullable().optional()
+    trailer:vine.string().nullable().optional(),
+    releaseDate:vine.date().nullable().optional()
 }) 
 
    export const updateMovieValidator = vine.compile(schema)

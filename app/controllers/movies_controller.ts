@@ -16,7 +16,7 @@ import Review from '#models/review'
 
 
 export default class MoviesController {
-   
+
 
     async getAllMovies({ request, response }: HttpContext) {
         // Extract pagination parameters
@@ -63,7 +63,7 @@ export default class MoviesController {
                 streaming: movie.streaming,
                 poster_url: movie.poster_url,
                 trailer: movie.trailer,
-                categories: movie.categories,
+                categories: movie.categories ? movie.categories.map((category:any) => category.name) : [],
                 avgRating,
                 reviewCount,
             };
@@ -140,7 +140,7 @@ export default class MoviesController {
                     streaming: movie.streaming,
                     poster_url: movie.poster_url,
                     trailer: movie.trailer,
-                    categories: movie.categories,
+                    categories:movie.categories ? movie.categories.map((category:any) => category.name) : [],
                     avgRating,
                     reviewCount,
                 };
@@ -159,6 +159,94 @@ export default class MoviesController {
         } catch (error) {
             return response.internalServerError(error);
         }
+    }
+
+
+    async getRecommendMovies({  response, auth }: HttpContext) {
+        const user = auth.getUserOrFail()
+
+        let categories = user.favoritecategories
+
+        if (!categories) {
+            return response.notFound("USER DONT HAVE FAVORITE CATEGORY")
+        }
+
+        let categoriesJsonObject = JSON.parse(categories)
+
+        const watchedMovieIds = await Review.query()
+            .where('userId', user.id) // เงื่อนไข userId
+            .select('movieId')        // ดึงเฉพาะ column movieId
+            .then(reviews => reviews.map(review => review.movieId))
+
+        const favoriteCategories = await Category.query().whereIn('name', categoriesJsonObject)
+        .select('id').then(categories => categories.map(category => category.id))
+
+
+        const moviesByFavoriteCategory= await MovieCategory.query().whereIn('categoryId',favoriteCategories).whereNotIn('movieId',watchedMovieIds).limit(30)
+        .select('movieId').then(movieCategories => movieCategories.map(movieCategory => movieCategory.movieId))
+
+  
+        try {
+            // Fetch movies belonging to the category with pagination
+            const moviesQuery = Movie.query()
+                .whereIn('id', moviesByFavoriteCategory)
+                .preload('reviews', (queryReview) => {
+                    queryReview.select('star');
+                })
+                .preload('categories', (queryCategory) => {
+                    queryCategory.select('name')
+                })
+        
+            // Execute the query and get the results
+            const movies = await moviesQuery;
+        
+            // Map and clean the movies data
+            const moviesWithAvgRatings = movies.map((movie) => {
+                // Extract reviews from the preloaded data
+                const reviews = movie.reviews || [];
+        
+                // Calculate the average rating and review count
+                const totalStars = reviews.reduce((sum, review) => sum + review.star, 0);
+                const avgRating = reviews.length > 0 ? (totalStars / reviews.length).toFixed(1) : '0';
+                const reviewCount = reviews.length;
+        
+                // Return a cleaned movie object
+                return {
+                    id: movie.id,
+                    title: movie.title,
+                    description: movie.description,
+                    director: movie.director ? JSON.parse(movie.director) : [],
+                    writer: movie.writer ? JSON.parse(movie.writer) : [],
+                    cast: movie.cast ? JSON.parse(movie.cast) : [],
+                    movierate: movie.movierate,
+                    duration: movie.duration,
+                    release_date: movie.releaseDate,
+                    streaming: movie.streaming,
+                    poster_url: movie.poster_url,
+                    trailer: movie.trailer,
+                    categories: movie.categories ? movie.categories.map((category) => category.name) : [],
+                    avgRating,
+                    reviewCount,
+                };
+            });
+        
+            const topRatedMovies = moviesWithAvgRatings
+            .sort((a:any, b:any) => b.avgRating - a.avgRating)  // Sort by avgRating (descending)
+            .slice(0, 8);  // Take the top 8
+
+
+        
+            // Send response with pagination meta and cleaned data
+            response.ok({
+                meta: {
+                    total:topRatedMovies.length
+                },
+                data: topRatedMovies
+            });
+        } catch (error) {
+            return response.internalServerError(error);
+        }
+        
     }
 
     async getMovieById({ params, response }: HttpContext) {
@@ -201,7 +289,7 @@ export default class MoviesController {
     }
 
     async createNewMovie({ request, response, auth, bouncer }: HttpContext) {
-        const user = auth.getUserOrFail()
+        auth.getUserOrFail()
         await bouncer.with('MoviePolicy').authorize('create')
         try {
             const payload = await request.validateUsing(createMovieValidator)
@@ -215,7 +303,7 @@ export default class MoviesController {
                 streaming: payload.streaming as keyof typeof Streaming,
                 poster_url: 'uploads/default.png',
                 trailer: 'https://www.youtube.com/embed/MzEFeIRJ0eQ?si=ciq9rLwHoWUXv8-r'
-            })            
+            })
             response.ok({ messages: "Movie createed successfully", movie: movie })
         } catch (error) {
             console.log(error);
@@ -227,8 +315,8 @@ export default class MoviesController {
         const { id } = params
         await bouncer.with('MoviePolicy').authorize('create')
         try {
-            Review.query().where('movieId',id).delete()
-            MovieCategory.query().where('movieId',id).delete()
+            Review.query().where('movieId', id).delete()
+            MovieCategory.query().where('movieId', id).delete()
             const movie = await Movie.findOrFail(id)
             await movie.delete()
             response.ok({ message: 'Movie deleted successfully' })

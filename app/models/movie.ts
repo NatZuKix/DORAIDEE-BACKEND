@@ -3,8 +3,6 @@ import { BaseModel, column,manyToMany,hasMany } from '@adonisjs/lucid/orm'
 import type { HasMany,ManyToMany} from '@adonisjs/lucid/types/relations'
 import Category from './category.js'
 import Review from './review.js'
-import Streaming from '../../Enums/Streaming.js'
-import MovieRate from '../../Enums/MovieRate.js'
 
 
 export default class Movie extends BaseModel {

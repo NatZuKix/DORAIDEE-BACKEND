@@ -8,6 +8,7 @@ import CategoriesController from '#controllers/categories_controller'
 router.group(()=>{ 
     router.group(()=>{ 
         router.post('/',[MoviesController,'createNewMovie']).as('movie.create') 
+        router.get('/recommmend',[MoviesController,'getRecommendMovies']).as('movie.recommend') 
         router.post('/:id',[MoviesController,'uploadPoster']).as('movie.uploadPoster')
         router.delete('/:id',[MoviesController,'removeMovie']).as('movie.remove')
         router.put('/:id',[MoviesController,'editMovie']).as('movie.edit')

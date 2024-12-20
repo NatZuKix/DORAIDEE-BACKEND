@@ -24,7 +24,7 @@ export default class Movie extends BaseModel {
   declare writer: string
 
   @column()
-  declare movierate: MovieRate
+  declare movierate:string
 
   @column()
   declare cast: string
@@ -36,7 +36,7 @@ export default class Movie extends BaseModel {
   declare releaseDate: Date
 
   @column()
-  declare streaming: Streaming
+  declare streaming: string
 
   @column()
   declare poster_url: string
@@ -44,8 +44,6 @@ export default class Movie extends BaseModel {
   @column()
   declare trailer: string
 
-  @column()
-  declare userId: number
 
 
 

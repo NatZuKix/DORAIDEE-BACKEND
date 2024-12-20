@@ -17,7 +17,6 @@ export default class extends BaseSchema {
       table.enum('streaming', ['cinema', 'netflix', 'disney+hostar', 'hbomax', 'amazonprime']).defaultTo('cinema') 
       table.string('poster_url')
       table.text('trailer')
-      table.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE')
       table.timestamp('created_at').defaultTo(this.now())
       table.timestamp('updated_at').defaultTo(this.now())
     })

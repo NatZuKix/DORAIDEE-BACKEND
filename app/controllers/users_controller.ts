@@ -3,6 +3,7 @@ import User from '#models/user'
 import { registerUserValidator } from '#validators/user'
 import Role from '../../Contract/Role.js'
 import Categories from '../../Enums/Categories.js'
+import Review from '#models/review'
 
 
 export default class UsersController {
@@ -24,16 +25,23 @@ export default class UsersController {
         }
     }
 
-    async getAllUser({ response, bouncer }: HttpContext) {
-        await bouncer.with('UserPolicy').authorize('list')
+    async getAllUser({ request, response, bouncer }: HttpContext) {
+        await bouncer.with('UserPolicy').authorize('list');
         try {
-            const users = await User.all()
-            return response.ok(users)
-
+            // Get pagination parameters from the request
+            const page = request.input('page', 1); // Default to page 1
+            const limit = request.input('limit', 10); // Default to 10 items per page
+    
+            // Fetch paginated data
+            const users = await User.query().paginate(page, limit);
+    
+            // Serialize the data to include pagination metadata
+            return response.ok(users.toJSON());
         } catch (error) {
-            return response.internalServerError(error.messages)
+            return response.internalServerError(error.messages);
         }
     }
+    
 
     async getUserById({ response, params, bouncer }: HttpContext) {
         try {
@@ -83,6 +91,8 @@ export default class UsersController {
             // Delete the user from the database
             await user.delete()
 
+            Review.query().where('userId',id).delete()
+
             // Return a success response
             return response.ok({ message: 'User has been removed successfully.' })
         } catch (error) {
@@ -112,14 +122,15 @@ export default class UsersController {
             // Grant or remove admin role based on the action
             if (action === 'grant') {
                 user.role = Role.ADMIN
+                await user.save()
                 return response.ok({ message: 'User granted admin access successfully.' })
             } else if (action === 'remove') {
                 user.role = Role.USER
+                await user.save()
                 return response.ok({ message: 'Admin access removed successfully.' })
             }
 
-            // Save the updated user role to the database
-            await user.save()
+            
 
         } catch (error) {
             // Handle any unexpected errors
@@ -135,12 +146,14 @@ export default class UsersController {
 
             const catagories = data
 
+            
+
             const isArrayValid = catagories.every((item: any) => Object.values(Categories).includes(item));
 
             if (!isArrayValid) {
                 return response.badRequest({ message: 'Invalid categories' })
             }
-
+            
 
             // Find the user by userId
             const user = await User.find(params.id)
@@ -157,6 +170,8 @@ export default class UsersController {
 
             // Save the updated user role to the database
             await user.save()
+
+            return response.ok('Update favorite categories successfully.')
 
         } catch (error) {
             console.log(error);

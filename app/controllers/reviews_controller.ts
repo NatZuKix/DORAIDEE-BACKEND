@@ -31,11 +31,12 @@ export default class ReviewsController {
         }
     }
 
-    async removeReview({ auth, params,response,bouncer }: HttpContext) {
+    async removeReview({ auth, params,response,bouncer,request }: HttpContext) {
         const user = auth.getUserOrFail()
         const { id } = params
+        const {userId}= request.all()
         try {
-            const review = await Review.query().where('movieId', id).where('userId', user.id).firstOrFail()
+            const review = await Review.query().where('movieId', id).where('userId',userId).firstOrFail()
             await bouncer.with('ReviewPolicy').authorize('delete',review!)
             review.delete()
             return response.ok("Review has been removed successfully.")

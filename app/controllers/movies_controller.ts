@@ -11,8 +11,12 @@ import { title } from 'process'
 import { fileURLToPath } from 'url';
 import Category from '#models/category'
 import MovieCategory from '#models/movie_category'
-export default class MoviesController {
+import Review from '#models/review'
 
+
+
+export default class MoviesController {
+   
 
     async getAllMovies({ request, response }: HttpContext) {
         // Extract pagination parameters
@@ -207,12 +211,11 @@ export default class MoviesController {
                 director: payload.director,
                 writer: payload.writer,
                 cast: payload.cast,
-                movierate: MovieRate[payload.movierate as keyof typeof MovieRate],
-                streaming: Streaming[payload.streaming as keyof typeof Streaming],
-                userId: user.id,
+                movierate: payload.movierate as keyof typeof MovieRate,
+                streaming: payload.streaming as keyof typeof Streaming,
                 poster_url: 'uploads/default.png',
                 trailer: 'https://www.youtube.com/embed/MzEFeIRJ0eQ?si=ciq9rLwHoWUXv8-r'
-            })
+            })            
             response.ok({ messages: "Movie createed successfully", movie: movie })
         } catch (error) {
             console.log(error);
@@ -224,6 +227,8 @@ export default class MoviesController {
         const { id } = params
         await bouncer.with('MoviePolicy').authorize('create')
         try {
+            Review.query().where('movieId',id).delete()
+            MovieCategory.query().where('movieId',id).delete()
             const movie = await Movie.findOrFail(id)
             await movie.delete()
             response.ok({ message: 'Movie deleted successfully' })
@@ -260,8 +265,8 @@ export default class MoviesController {
             movie.director = payload.director ?? movie.director
             movie.writer = payload.writer ?? movie.writer
             movie.cast = payload.cast ?? movie.cast
-            movie.movierate = payload.movierate != null ? MovieRate[payload.movierate as keyof typeof MovieRate] : movie.movierate
-            movie.streaming = payload.streaming != null ? Streaming[payload.streaming as keyof typeof Streaming] : movie.streaming
+            movie.movierate = payload.movierate != null ? payload.movierate as keyof typeof MovieRate : movie.movierate
+            movie.streaming = payload.streaming != null ? payload.streaming as keyof typeof Streaming : movie.streaming
             movie.duration = payload.duration ?? movie.duration
             movie.trailer = payload.trailer ?? movie.trailer
             movie.releaseDate = payload.releaseDate ?? movie.releaseDate
@@ -379,6 +384,4 @@ export default class MoviesController {
             response.internalServerError('Failed to get poster')
         }
     }
-
-
 }

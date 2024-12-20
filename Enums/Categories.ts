@@ -1,7 +1,7 @@
 enum Categories{
     Action = "Action",
     Comedy = "Comedy",
-    Drama = " Drama",
+    Drama = "Drama",
     Romance = "Romance",
     Horror = "Horror",
     SciFi = "SciFi",
